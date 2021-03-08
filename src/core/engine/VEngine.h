@@ -14,6 +14,7 @@ class VEngine
 	VkPipelineLayout_T* PipelineLayout;
 	VulkanPipeline* Pipeline;
 	VkApplicationInfo AppInfo;
+	std::vector<VkCommandBuffer> CommandBuffers;
 	Vulkan* _CreateVulkanInstance(const char* appName);
 	void _CreatePipeLineLayout();
 	void _CreateCommandBuffers();

@@ -13,7 +13,6 @@
     <ClCompile Include="src\core\debugger\private\VulkanValidationLayers.cpp" />
     <ClCompile Include="src\core\debugger\public\ConsoleLogger.cpp" />
     <ClCompile Include="src\core\debugger\public\FileLogger.cpp" />
-    <ClCompile Include="src\core\api\pipelineConfigs\IVulkanPipelineConfiguration.cpp" />
     <ClCompile Include="src\core\api\pipelineConfigs\VulkanPipelineDefaultConfiguration.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -275,6 +274,7 @@
     <ClInclude Include="configFiles\LoggRegister.config" />
     <ClInclude Include="src\core\api\pipelineConfigs\IVulkanPipelineConfiguration.h" />
     <ClInclude Include="src\core\api\pipelineConfigs\VulkanPipelineDefaultConfiguration.h" />
+    <ClInclude Include="src\defines.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="3dparty\glm\detail\func_common.inl" />

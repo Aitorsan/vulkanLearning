@@ -20,11 +20,18 @@ class VulkanSwapChain
 	std::vector<VkDeviceMemory> DepthImageMemorys;
 	std::vector<VkFramebuffer> FrameBuffers;
 	VkRenderPass RenderPass;
+	//Sync objects
+	VkSemaphore ImageAvailableSemaphore;
+	VkSemaphore RenderFinishedSemaphore;
 public:
 	~VulkanSwapChain();
 	VulkanSwapChain(Vulkan& vulkanLib,VkExtent2D windowExtend);
 	VkExtent2D GetSwapChainExtent() const { return SwapChainExtent; }
 	VkRenderPass GetRenderPass() const { return RenderPass; }
+	VkFramebuffer GetFrameBuffer(int index) const; 
+	VkResult AdquireNextImage(uint32_t* index);
+	std::size_t ImageCount() const { return SwapChainImages.size(); }
+
 private:
 	void _CreateSwapChain();
 	void _CreateImageViews();
@@ -32,6 +39,7 @@ private:
 	// framebuffer attachments that will be used while rendering
 	void _CreateRenderPass();
 	void _CreateFrameBuffers();
+	void _CreateSyncronizationObjects();
 };
 
 #endif //VULKAN_SWAP_CHAIN_HPP

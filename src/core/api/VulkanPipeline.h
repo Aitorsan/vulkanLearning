@@ -20,8 +20,9 @@ public:
 	VulkanPipeline(const VulkanPipeline&) = delete;
 	VulkanPipeline& operator=(const VulkanPipeline&) = delete;
 
-	void CreateGraphicsPipeline(const IVulkanPipelineConfigurationInfo& pipeConfig);
 	VkShaderModule_T* CreateShaderModule(const std::vector<char>& code);
+	void CreateGraphicsPipeline(const IVulkanPipelineConfigurationInfo& pipeConfig);
+	void BindPipeline(VkCommandBuffer_T* cmdBuffer);
 };
 
 #endif // VULAN_PIPELINE_H

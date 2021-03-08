@@ -47,6 +47,7 @@ public:
 	VkInstance GetVkInstance()const  { return VulkanInstance; }
 	VkPhysicalDevice GetGpu() const{ return PhysicalGpu; }
 	VkSurfaceKHR GetSurface()const { return WindowSurface; }
+	VkCommandPool GetCommandPool() const { return CommandPool; }
 	int GetGraphicsQueueIndex() const { return GraphicsQueueIndex; }
 	int GetPresentationQueueIndex() const { return PresentationQueueIndex; }
 

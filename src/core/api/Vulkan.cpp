@@ -78,8 +78,7 @@ void Vulkan::CreateVulkanInstance(const VkApplicationInfo& appInfo)
 		createInf.pNext = &ValLayers.DebugMessengerCreateInfo;
 	}
 
-	if (vkCreateInstance(&createInf, nullptr, &VulkanInstance) != VK_SUCCESS)
-		LOG_ERR("Cant't find a compatilbe Vulkan installable client\n");
+	VK_CHECK(vkCreateInstance(&createInf, nullptr, &VulkanInstance), " cant't find a compatilbe Vulkan installable client\n");
 }
 
 bool Vulkan::HasPhysicalDeviceRequiredExtensionSupport(VkPhysicalDevice gpu)
@@ -213,8 +212,7 @@ void Vulkan::CreateLogicalDevice(VkPhysicalDevice physicalGpu)
 	createInfo.enabledExtensionCount = RequiredGpuDeviceExtensions.size();
 	createInfo.ppEnabledExtensionNames = RequiredGpuDeviceExtensions.data();
 
-	if (vkCreateDevice(physicalGpu, &createInfo, nullptr, &LogicalDevice) != VK_SUCCESS)
-		LOG_ERR("Failed to create logical device!");
+	VK_CHECK(vkCreateDevice(physicalGpu, &createInfo, nullptr, &LogicalDevice));
 }
 
 void Vulkan::CreateQueues( VkDevice logicalDevice)
@@ -229,9 +227,8 @@ void Vulkan::CreateCommandPool(VkDevice logicalDevice)
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	poolInfo.queueFamilyIndex = GraphicsQueueIndex;
 	poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-
-	if (vkCreateCommandPool(logicalDevice, &poolInfo, nullptr, &CommandPool) != VK_SUCCESS)
-		LOG_ERR("Failed to create command pool");
+	
+	VK_CHECK(vkCreateCommandPool(logicalDevice, &poolInfo, nullptr, &CommandPool));
 }
 
 

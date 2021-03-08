@@ -2,7 +2,7 @@
 #define VULKAN_PIPELINE_CONFIGURATION_HPP
 
 #include <vulkan/vulkan.h>
-
+#include "defines.h"
 
 class IVulkanPipelineConfigurationInfo
 {
@@ -19,11 +19,8 @@ public:
 	VkRenderPass_T* Renderpass = nullptr;
 	uint32_t SubPass = 0;
 
-	// ColorBlendInfo points to colorBlendAttachment and if we copy this object
-	// we might have a dangling pointer, so we need deep copy
-	IVulkanPipelineConfigurationInfo() = default;
-	IVulkanPipelineConfigurationInfo(const IVulkanPipelineConfigurationInfo&);
-	IVulkanPipelineConfigurationInfo& operator=(const IVulkanPipelineConfigurationInfo&);
+	DISABLE_COPY_GEN_DEFAULT_CONSTRUCTOR(IVulkanPipelineConfigurationInfo)
+		
 	virtual ~IVulkanPipelineConfigurationInfo(){}
 	virtual void CreatePipelineConfigInfo( uint32_t width, uint32_t height) = 0;
 };

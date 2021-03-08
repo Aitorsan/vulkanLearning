@@ -26,8 +26,8 @@ VulkanPipeline::~VulkanPipeline()
 void VulkanPipeline::CreateGraphicsPipeline(const IVulkanPipelineConfigurationInfo& pipeConfig)
 {
 	ShaderList shaders = ShaderLoader::loadShaders("glslShaders/vertex.spv", "glslShaders/fragment.spv");
-
-	VkShaderModule_T* vertexShaderModule = CreateShaderModule(shaders.at(0));//TODO: create enums for the indices in shaders vector
+	//TODO: create enums for the indices in shaders vector
+	VkShaderModule_T* vertexShaderModule = CreateShaderModule(shaders.at(0));
 	VkShaderModule_T* fragmentShaderModule = CreateShaderModule(shaders.at(1));
 
 	// Pipeline Programable shader stages 
@@ -92,12 +92,16 @@ void VulkanPipeline::CreateGraphicsPipeline(const IVulkanPipelineConfigurationIn
 	graphicsPipelineCreateInfo.basePipelineIndex = -1;
 	graphicsPipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-	if (VK_SUCCESS != vkCreateGraphicsPipelines(VulkanLib.GetVkLogicalDevice(), nullptr, 1, &graphicsPipelineCreateInfo, nullptr, &GraphicsPipeline))
-		LOG_ERR("Failed to create graphics Pipeline")
+	VK_CHECK(vkCreateGraphicsPipelines(VulkanLib.GetVkLogicalDevice(), nullptr, 1, &graphicsPipelineCreateInfo, nullptr, &GraphicsPipeline));
 
 	//clean shaders
 	vkDestroyShaderModule(VulkanLib.GetVkLogicalDevice(), vertexShaderModule, nullptr);
 	vkDestroyShaderModule(VulkanLib.GetVkLogicalDevice(), fragmentShaderModule, nullptr);
+}
+
+void VulkanPipeline::BindPipeline(VkCommandBuffer_T* cmdBuffer)
+{
+	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,GraphicsPipeline );
 }
 
 
@@ -110,8 +114,7 @@ VkShaderModule_T* VulkanPipeline::CreateShaderModule(const std::vector<char>& co
 
 	VkShaderModule_T* shaderModule = {nullptr};
 
-	if (vkCreateShaderModule(VulkanLib.GetVkLogicalDevice(), &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
-		LOG_ERR("Failed to create Shader module")
+	VK_CHECK(vkCreateShaderModule(VulkanLib.GetVkLogicalDevice(), &createInfo, nullptr, &shaderModule));
 
 	return shaderModule;
 }

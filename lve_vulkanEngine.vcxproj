@@ -176,7 +176,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="3dparty\glm\detail\glm.cpp" />
-    <ClCompile Include="src\core\api\pipelineConfigs\IVulkanPipelineConfiguration.cpp" />
     <ClCompile Include="src\core\api\pipelineConfigs\VulkanPipelineDefaultConfiguration.cpp" />
     <ClCompile Include="src\core\api\VulkanSwapChain.cpp" />
     <ClCompile Include="src\core\debugger\public\FileLogger.cpp" />
@@ -449,6 +448,7 @@
     <ClInclude Include="src\core\api\VulkanPipeline.h" />
     <ClInclude Include="src\core\engine\VEngine.h" />
     <ClInclude Include="src\core\api\Vulkan.h" />
+    <ClInclude Include="src\defines.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="3dparty\glm\detail\func_common.inl" />

@@ -21,8 +21,8 @@
 #define LOG_WARN(message,...){ LogEngine::GetLogEngineInstance()->LogMsg(LOG_TYPE::WARN,message,__VA_ARGS__);}
 #define LOG_ERR(message,...) {LogEngine::GetLogEngineInstance()->LogMsg(LOG_TYPE::ERR,message,__VA_ARGS__); throw std::exception(message);}
 #define VAL_LAYER(message,...){ LogEngine::GetLogEngineInstance()->LogMsg(LOG_TYPE::VAL,message ,__VA_ARGS__);}
-#define ASSERT_EQU(object, value, message, ...) do { if ( object != value){LOG_ERR(message,__VA_ARGS__}}while(0);
-#define ASSERT_NOT_NULL(object, message,...) do { if (!object){LOG_ERR(message,__VA_ARGS__)}}while(0);
-#define VK_CHECK(func,message,...) do{ if((func) != 0) LOG_ERR("Failed to create "#func ##"\n", __VA_ARGS__) }while(0);
+#define ASSERT_EQU(object, value, message, ...) do { if ( object != value){LOG_ERR(message,__VA_ARGS__}}while(0)
+#define ASSERT_NOT_NULL(object, message,...) do { if (!object){LOG_ERR(message,__VA_ARGS__)}}while(0)
+#define VK_CHECK(func,message,...) do{ if((func) != 0) LOG_ERR("Failed to "#func ##"\n", __VA_ARGS__) }while(0)
 
 #endif

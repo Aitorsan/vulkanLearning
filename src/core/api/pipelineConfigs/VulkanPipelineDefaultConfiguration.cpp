@@ -1,15 +1,5 @@
 #include "VulkanPipeLineDefaultConfiguration.h"
 
-VulkanPipelineDefaultConfiguration::VulkanPipelineDefaultConfiguration(const VulkanPipelineDefaultConfiguration& other)
-	:IVulkanPipelineConfigurationInfo(other)
-{
-}
-
-VulkanPipelineDefaultConfiguration& VulkanPipelineDefaultConfiguration::operator=(const VulkanPipelineDefaultConfiguration& other)
-{
-	IVulkanPipelineConfigurationInfo::operator=(other);
-	return *this;
-}
 
 void VulkanPipelineDefaultConfiguration::CreatePipelineConfigInfo( uint32_t width, uint32_t height)
 {
@@ -89,6 +79,4 @@ void VulkanPipelineDefaultConfiguration::CreatePipelineConfigInfo( uint32_t widt
 		ColorBlendInfo.blendConstants[1] = 0.0f; // Optional
 		ColorBlendInfo.blendConstants[2] = 0.0f; // Optional
 		ColorBlendInfo.blendConstants[3] = 0.0f;
-
-		
 }

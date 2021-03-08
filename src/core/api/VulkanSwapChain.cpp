@@ -9,7 +9,8 @@
 VulkanSwapChain::~VulkanSwapChain()
 {
 	VkDevice logicalDevice = VulkanLib.GetVkLogicalDevice();
-
+	vkDestroySemaphore(logicalDevice, RenderFinishedSemaphore, nullptr);
+	vkDestroySemaphore(logicalDevice, ImageAvailableSemaphore, nullptr);
 	vkDestroyRenderPass(logicalDevice, RenderPass, nullptr);
 
 	for (auto imageView : SwapChainImageViews) 
@@ -32,6 +33,8 @@ VulkanSwapChain::VulkanSwapChain(Vulkan& vulkanLib,VkExtent2D windowExtent)
 	, RenderPass{}
 	, DepthImageMemorys{}
 	, FrameBuffers{}
+	, ImageAvailableSemaphore{}
+	, RenderFinishedSemaphore{}
 {
 	_CreateSwapChain();
 	_CreateImageViews();
@@ -115,8 +118,7 @@ void VulkanSwapChain::_CreateSwapChain()
 	// to the old swapChain
 	swapChainCreateInfo.oldSwapchain = VK_NULL_HANDLE;
 
-	if (vkCreateSwapchainKHR(VulkanLib.GetVkLogicalDevice(), &swapChainCreateInfo, nullptr, &SwapChain) != VK_SUCCESS)
-		LOG_ERR("Swap Chain creation failed\n")
+	VK_CHECK(vkCreateSwapchainKHR(VulkanLib.GetVkLogicalDevice(), &swapChainCreateInfo, nullptr, &SwapChain));
 
 	//get handles to the Images the are allocated with the swap chain and destroy when the swap chain is destroyed
 	uint32_t imageCount {0};
@@ -181,8 +183,7 @@ void VulkanSwapChain::_CreateDepthImageViews()
 		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		imageInfo.flags = 0;
 
-		if (vkCreateImage(VulkanLib.GetVkLogicalDevice(), &imageInfo, nullptr, &DepthImages[i]) != VK_SUCCESS)
-			LOG_ERR("failed to create image!\n");
+		VK_CHECK(vkCreateImage(VulkanLib.GetVkLogicalDevice(), &imageInfo, nullptr, &DepthImages[i])," failed to create image!\n");
 
 		VkMemoryRequirements memRequirements;
 		vkGetImageMemoryRequirements(VulkanLib.GetVkLogicalDevice(), DepthImages[i], &memRequirements);
@@ -202,11 +203,9 @@ void VulkanSwapChain::_CreateDepthImageViews()
 			}
 		}
 
-		if (vkAllocateMemory(VulkanLib.GetVkLogicalDevice(), &allocInfo, nullptr, &DepthImageMemorys[i]) != VK_SUCCESS) 
-			LOG_ERR("failed to allocate image memory!\n");
+		VK_CHECK(vkAllocateMemory(VulkanLib.GetVkLogicalDevice(), &allocInfo, nullptr, &DepthImageMemorys[i])," failed to allocate image memory!\n");
 
-		if (vkBindImageMemory(VulkanLib.GetVkLogicalDevice(), DepthImages[i],DepthImageMemorys[i],0) != VK_SUCCESS)
-			LOG_ERR("failed to bind image memory!\n")
+		VK_CHECK(vkBindImageMemory(VulkanLib.GetVkLogicalDevice(), DepthImages[i], DepthImageMemorys[i], 0), " bind image memory!\n");
 
 		VkImageViewCreateInfo viewInfo{};
 		viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -219,9 +218,7 @@ void VulkanSwapChain::_CreateDepthImageViews()
 		viewInfo.subresourceRange.baseArrayLayer = 0;
 		viewInfo.subresourceRange.layerCount = 1;
 
-		if (vkCreateImageView(VulkanLib.GetVkLogicalDevice(), &viewInfo, nullptr, &DepthImageViews[i]) != VK_SUCCESS) {
-			LOG_ERR("failed to create texture image view!\n");
-		}
+		VK_CHECK(vkCreateImageView(VulkanLib.GetVkLogicalDevice(), &viewInfo, nullptr, &DepthImageViews[i]),"failed to create texture image view!\n");
 	}
 }
 
@@ -310,8 +307,7 @@ void VulkanSwapChain::_CreateRenderPass()
 	renderPassInfo.dependencyCount = 1;
 	renderPassInfo.pDependencies = &dependency;
 
-	if (VK_SUCCESS != vkCreateRenderPass(VulkanLib.GetVkLogicalDevice(),&renderPassInfo,nullptr,&RenderPass))
-		LOG_ERR("Faile to create Render pass!\n")
+	VK_CHECK(vkCreateRenderPass(VulkanLib.GetVkLogicalDevice(), &renderPassInfo, nullptr, &RenderPass));
 }
 
 void VulkanSwapChain::_CreateFrameBuffers()
@@ -331,8 +327,28 @@ void VulkanSwapChain::_CreateFrameBuffers()
 		framebuffCreateInf.height = SwapChainExtent.height;
 		framebuffCreateInf.layers = 1;
 
-		VK_CHECK(vkCreateFramebuffer(VulkanLib.GetVkLogicalDevice(),&framebuffCreateInf,nullptr,&FrameBuffers[i]))
+		VK_CHECK(vkCreateFramebuffer(VulkanLib.GetVkLogicalDevice(), &framebuffCreateInf, nullptr, &FrameBuffers[i]));
 	}
-
-
 }
+
+void VulkanSwapChain::_CreateSyncronizationObjects()
+{
+	VkSemaphoreCreateInfo semaphoreInfo = {};
+	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+	VK_CHECK(vkCreateSemaphore(VulkanLib.GetVkLogicalDevice(), &semaphoreInfo, nullptr, &ImageAvailableSemaphore));
+	VK_CHECK(vkCreateSemaphore(VulkanLib.GetVkLogicalDevice(), &semaphoreInfo, nullptr, &RenderFinishedSemaphore));
+}
+
+VkFramebuffer VulkanSwapChain::GetFrameBuffer(int index) const 
+{ 
+	assert(index < FrameBuffers.size() && index >= 0);
+	return FrameBuffers.at(index); 
+}
+
+VkResult VulkanSwapChain::AdquireNextImage(uint32_t* index)
+{
+	return vkAcquireNextImageKHR(VulkanLib.GetVkLogicalDevice(), SwapChain, UINT64_MAX, ImageAvailableSemaphore, VK_NULL_HANDLE, index);
+}
+
+

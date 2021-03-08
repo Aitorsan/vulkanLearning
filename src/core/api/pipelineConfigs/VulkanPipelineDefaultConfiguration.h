@@ -5,10 +5,7 @@
 class VulkanPipelineDefaultConfiguration : public IVulkanPipelineConfigurationInfo
 {
 public:
-	VulkanPipelineDefaultConfiguration() = default;
-	VulkanPipelineDefaultConfiguration(const VulkanPipelineDefaultConfiguration&);
-	VulkanPipelineDefaultConfiguration& operator=(const VulkanPipelineDefaultConfiguration&);
-	
+	DISABLE_COPY_GEN_DEFAULT_CONSTRUCTOR(VulkanPipelineDefaultConfiguration)
 	virtual ~VulkanPipelineDefaultConfiguration() {}
 	void CreatePipelineConfigInfo( uint32_t width, uint32_t height) override;
 
