@@ -9,16 +9,25 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
 	switch (msg)
 	{
-	case WM_DESTROY:
-		DestroyWindow(hwnd);
-		PostQuitMessage(0);
-		break;
-	case WM_PAINT:
-		ValidateRect(hwnd, NULL);
-		break;
-	default:
-		return DefWindowProc(hwnd, msg, wparam, lparam);
-		break;
+		case WM_CREATE:
+		{
+			Win32Window* win = (Win32Window*)((LPCREATESTRUCT)lparam)->lpCreateParams;
+			SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)win);
+			//win->OnCreate();
+			break;
+		}
+		case WM_DESTROY:
+		{
+			Win32Window* win = (Win32Window*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+			win->OnDestroy();
+			PostQuitMessage(0);
+			break;
+		}
+		case WM_PAINT:
+			ValidateRect(hwnd, NULL);
+			break;
+		default:
+			return DefWindowProc(hwnd, msg, wparam, lparam);
 	}
 	return NULL;
 }
@@ -27,9 +36,14 @@ Win32Window::Win32Window(LPCTSTR appName)
 	: WindowInstance(NULL)
 	, WindowHandle(nullptr)
 	, ApplicationName(appName)
+	, CloseWindow(false)
 {
 }
 
+Win32Window::~Win32Window()
+{
+	DestroyWindow(WindowHandle);
+}
 
 void Win32Window::CreateWin32Window(HINSTANCE hInstance)
 {
@@ -70,7 +84,7 @@ void Win32Window::CreateWin32Window(HINSTANCE hInstance)
 	,NULL
 	,NULL
 	,WindowInstance
-	,NULL);
+	,this);
 
 	if (WindowHandle == 0)
 		LOG_ERR("Error can't create window")
@@ -80,8 +94,25 @@ void Win32Window::CreateWin32Window(HINSTANCE hInstance)
 		SetForegroundWindow(WindowHandle);
 		SetFocus(WindowHandle);
 	}
-	
+	CloseWindow = false;
+}
 
+void Win32Window::PoolEvents()
+{
+
+	MSG message;
+
+	while (PeekMessage(&message, NULL, 0, 0,PM_REMOVE))
+	{
+		TranslateMessage(&message);
+		DispatchMessage(&message);
+	}
+}
+
+
+void Win32Window::OnDestroy()
+{
+	CloseWindow = true;
 }
 
 HWND Win32Window::GetHandleToWindow() const

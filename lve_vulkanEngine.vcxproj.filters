@@ -4,9 +4,9 @@
     <ClCompile Include="3dparty\glm\detail\glm.cpp" />
     <ClCompile Include="src\core\api\VulkanPipeline.cpp" />
     <ClCompile Include="src\core\utils\ShaderLoader.cpp" />
-    <ClCompile Include="wind32Main.cpp" />
+    <ClCompile Include="main.cpp" />
     <ClCompile Include="src\core\engine\VEngine.cpp" />
-    <ClCompile Include="src\core\api\Vulkan.cpp" />
+    <ClCompile Include="src\core\api\VulkanLib.cpp" />
     <ClCompile Include="src\core\api\VulkanSwapChain.cpp" />
     <ClCompile Include="src\core\os\Win32Window.cpp" />
     <ClCompile Include="src\core\debugger\private\LogEngine.cpp" />
@@ -261,7 +261,7 @@
     <ClInclude Include="src\core\api\VulkanPipeline.h" />
     <ClInclude Include="src\core\utils\ShaderLoader.h" />
     <ClInclude Include="src\core\engine\VEngine.h" />
-    <ClInclude Include="src\core\api\Vulkan.h" />
+    <ClInclude Include="src\core\api\VulkanLib.h" />
     <ClInclude Include="src\core\api\VulkanSwapChain.h" />
     <ClInclude Include="src\core\os\Win32Window.h" />
     <ClInclude Include="src\core\debugger\private\LogEngine.h" />

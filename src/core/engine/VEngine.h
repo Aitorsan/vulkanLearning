@@ -3,19 +3,19 @@
 
 #include "core/os/Win32Window.h"
 #include "core/api/VulkanPipeline.h"
-#include "core/api/Vulkan.h"
+#include "core/api/VulkanLib.h"
 #include "core/api/VulkanSwapChain.h"
 
 class VEngine
 {
 	Win32Window Window;
-	Vulkan* VulkanLib;
+	VulkanLib* Vulkan;
 	VulkanSwapChain* SwapChain;
 	VkPipelineLayout_T* PipelineLayout;
 	VulkanPipeline* Pipeline;
 	VkApplicationInfo AppInfo;
 	std::vector<VkCommandBuffer> CommandBuffers;
-	Vulkan* _CreateVulkanInstance(const char* appName);
+	VulkanLib* _CreateVulkanInstance(const char* appName);
 	void _CreatePipeLineLayout();
 	void _CreateCommandBuffers();
 	

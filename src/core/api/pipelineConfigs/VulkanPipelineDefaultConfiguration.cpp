@@ -3,7 +3,7 @@
 
 void VulkanPipelineDefaultConfiguration::CreatePipelineConfigInfo( uint32_t width, uint32_t height)
 {
-		//VIEWPORT STATE CONFIGURATION
+		// VIEWPORT STATE CONFIGURATION
 		// view port maps coordinates (-1,-1) (1,1)
 		// to (0,0) left size corner of image
 		// and widht, and height of the image

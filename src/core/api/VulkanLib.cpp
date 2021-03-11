@@ -1,5 +1,5 @@
 #define NOMINMAX
-#include "Vulkan.h"
+#include "VulkanLib.h"
 #include <map>
 #include <vector>
 #include <cstring>
@@ -10,7 +10,7 @@
 #include "core/debugger/public/Logger.h"
 #undef NOMINMAX;
 
-Vulkan::Vulkan(Win32Window& window)
+VulkanLib::VulkanLib(Win32Window& window)
 : VulkanInstance {nullptr}
 , PhysicalGpu{ VK_NULL_HANDLE }
 , LogicalDevice{ nullptr }
@@ -30,14 +30,17 @@ Vulkan::Vulkan(Win32Window& window)
 		RequiredVkIntanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 }
 
-Vulkan::~Vulkan()
+VulkanLib::~VulkanLib()
 {
+	vkDestroyCommandPool(LogicalDevice, CommandPool, nullptr);
 	ValLayers.CleanUpValidationLayers(VulkanInstance);
+	vkDestroyDevice(LogicalDevice, nullptr);
+	vkDestroySurfaceKHR(VulkanInstance,WindowSurface, nullptr);
 	vkDestroyInstance(VulkanInstance, NULL);
 }
 
 
-void Vulkan::Init(const VkApplicationInfo& appInfo)
+void VulkanLib::Init(const VkApplicationInfo& appInfo)
 {
 	// Check for validation support if validation layers are enabled
 	if (!ValLayers.CheckValidationLayerSupport())
@@ -55,7 +58,7 @@ void Vulkan::Init(const VkApplicationInfo& appInfo)
 }
 
 
-void Vulkan::CreateVulkanInstance(const VkApplicationInfo& appInfo)
+void VulkanLib::CreateVulkanInstance(const VkApplicationInfo& appInfo)
 {
 	// check available extensions
 	uint32_t extensionCount = {};
@@ -81,7 +84,7 @@ void Vulkan::CreateVulkanInstance(const VkApplicationInfo& appInfo)
 	VK_CHECK(vkCreateInstance(&createInf, nullptr, &VulkanInstance), " cant't find a compatilbe Vulkan installable client\n");
 }
 
-bool Vulkan::HasPhysicalDeviceRequiredExtensionSupport(VkPhysicalDevice gpu)
+bool VulkanLib::HasPhysicalDeviceRequiredExtensionSupport(VkPhysicalDevice gpu)
 {
 	uint32_t extensionCount = {};
 	vkEnumerateDeviceExtensionProperties(gpu, nullptr, &extensionCount, nullptr);
@@ -106,7 +109,7 @@ bool Vulkan::HasPhysicalDeviceRequiredExtensionSupport(VkPhysicalDevice gpu)
 	return true;
 }
 
-bool Vulkan::CheckSwapChainSupport(VkPhysicalDevice gpu, VkSurfaceKHR windowSurface)
+bool VulkanLib::CheckSwapChainSupport(VkPhysicalDevice gpu, VkSurfaceKHR windowSurface)
 {
 	uint32_t formatCount;
 	vkGetPhysicalDeviceSurfaceFormatsKHR(gpu, windowSurface, &formatCount, nullptr);
@@ -118,7 +121,7 @@ bool Vulkan::CheckSwapChainSupport(VkPhysicalDevice gpu, VkSurfaceKHR windowSurf
 }
 
 
-void Vulkan::SelectPhysicalDevice(VkInstance vulkanInstance, VkSurfaceKHR windowSurface)
+void VulkanLib::SelectPhysicalDevice(VkInstance vulkanInstance, VkSurfaceKHR windowSurface)
 {
 	uint32_t deviceCount = { 0 };
 	vkEnumeratePhysicalDevices(vulkanInstance, &deviceCount, nullptr);
@@ -173,7 +176,7 @@ void Vulkan::SelectPhysicalDevice(VkInstance vulkanInstance, VkSurfaceKHR window
 
 
 
-void Vulkan::CreateLogicalDevice(VkPhysicalDevice physicalGpu)
+void VulkanLib::CreateLogicalDevice(VkPhysicalDevice physicalGpu)
 {
 	/* Vulkan lets you assign priorities to queues to influence the scheduling 
 	   of command buffer execution using floats between 0.0 and 1.0. 
@@ -215,13 +218,13 @@ void Vulkan::CreateLogicalDevice(VkPhysicalDevice physicalGpu)
 	VK_CHECK(vkCreateDevice(physicalGpu, &createInfo, nullptr, &LogicalDevice));
 }
 
-void Vulkan::CreateQueues( VkDevice logicalDevice)
+void VulkanLib::CreateQueues( VkDevice logicalDevice)
 {
 	vkGetDeviceQueue(logicalDevice, GraphicsQueueIndex, 0, &GraphicsQueue);
 	vkGetDeviceQueue(logicalDevice, PresentationQueueIndex, 0, &PresentationQueue);
 }
 
-void Vulkan::CreateCommandPool(VkDevice logicalDevice)
+void VulkanLib::CreateCommandPool(VkDevice logicalDevice)
 {
 	VkCommandPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -232,7 +235,7 @@ void Vulkan::CreateCommandPool(VkDevice logicalDevice)
 }
 
 
-bool Vulkan::GetRequiredQueueFamilyIndices( VkPhysicalDevice physicalGpu, VkSurfaceKHR windowSurface)
+bool VulkanLib::GetRequiredQueueFamilyIndices( VkPhysicalDevice physicalGpu, VkSurfaceKHR windowSurface)
 {
 	uint32_t queueFamilyCount = { 0 };
 	vkGetPhysicalDeviceQueueFamilyProperties(physicalGpu, &queueFamilyCount, nullptr);
@@ -272,7 +275,7 @@ bool Vulkan::GetRequiredQueueFamilyIndices( VkPhysicalDevice physicalGpu, VkSurf
 	return graphicsSupportFound && presentationSupportFound;
 }
 
-VkFormat Vulkan::FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) 
+VkFormat VulkanLib::FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) 
 {
 	for (VkFormat format : candidates)
 	{

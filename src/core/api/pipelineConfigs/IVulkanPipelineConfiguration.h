@@ -19,7 +19,7 @@ public:
 	VkRenderPass_T* Renderpass = nullptr;
 	uint32_t SubPass = 0;
 
-	DISABLE_COPY_GEN_DEFAULT_CONSTRUCTOR(IVulkanPipelineConfigurationInfo)
+	DISABLE_COPY_GEN_DEFAULT_CONSTRUCT(IVulkanPipelineConfigurationInfo)
 		
 	virtual ~IVulkanPipelineConfigurationInfo(){}
 	virtual void CreatePipelineConfigInfo( uint32_t width, uint32_t height) = 0;

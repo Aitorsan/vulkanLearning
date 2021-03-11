@@ -3,25 +3,10 @@
 
 #include <cassert>
 #include "core/debugger/public/Logger.h"
-#include "Vulkan.h"
+#include "VulkanLib.h"
 
-
-VulkanSwapChain::~VulkanSwapChain()
-{
-	VkDevice logicalDevice = VulkanLib.GetVkLogicalDevice();
-	vkDestroySemaphore(logicalDevice, RenderFinishedSemaphore, nullptr);
-	vkDestroySemaphore(logicalDevice, ImageAvailableSemaphore, nullptr);
-	vkDestroyRenderPass(logicalDevice, RenderPass, nullptr);
-
-	for (auto imageView : SwapChainImageViews) 
-	{
-		vkDestroyImageView(logicalDevice, imageView, nullptr);
-	}
-	vkDestroySwapchainKHR(logicalDevice, SwapChain, nullptr);
-}
-
-VulkanSwapChain::VulkanSwapChain(Vulkan& vulkanLib,VkExtent2D windowExtent)
-	: VulkanLib{vulkanLib}
+VulkanSwapChain::VulkanSwapChain(VulkanLib& vulkan,VkExtent2D windowExtent)
+	: Vulkan{vulkan}
 	, WindowExtent{ windowExtent }
 	, SwapChainExtent{}
 	, SwapChain{}
@@ -33,29 +18,53 @@ VulkanSwapChain::VulkanSwapChain(Vulkan& vulkanLib,VkExtent2D windowExtent)
 	, RenderPass{}
 	, DepthImageMemorys{}
 	, FrameBuffers{}
-	, ImageAvailableSemaphore{}
-	, RenderFinishedSemaphore{}
+	, CurrentFrame{0}
+	, ImageAvailableSemaphores{}
+	, RenderFinishedSemaphores{}
+	, InFlightFences {}
+	, ImagesInFlight{}
 {
 	_CreateSwapChain();
 	_CreateImageViews();
 	_CreateDepthImageViews();
 	_CreateRenderPass();
 	_CreateFrameBuffers();
+	_CreateSyncronizationObjects();
+}
+
+
+VulkanSwapChain::~VulkanSwapChain()
+{
+	VkDevice logicalDevice = Vulkan.GetLogicalDevice();
+
+	for (int i = 0; i < MAX_FRAMES_TO_BE_PROCESSED; ++i)
+	{
+		vkDestroySemaphore(logicalDevice, RenderFinishedSemaphores[i], nullptr);
+		vkDestroySemaphore(logicalDevice, ImageAvailableSemaphores[i], nullptr);
+		vkDestroyFence(logicalDevice, InFlightFences[i], nullptr);
+	}
+	vkDestroyRenderPass(logicalDevice, RenderPass, nullptr);
+
+	for (auto imageView : SwapChainImageViews)
+	{
+		vkDestroyImageView(logicalDevice, imageView, nullptr);
+	}
+	vkDestroySwapchainKHR(logicalDevice, SwapChain, nullptr);
 }
 
 void VulkanSwapChain::_CreateSwapChain()
 {
 	//Check if currentExtent has been set if not we need to set it manually
 	VkSurfaceCapabilitiesKHR capabilities = {};
-	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(VulkanLib.GetGpu(), VulkanLib.GetSurface(), &capabilities);
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(Vulkan.GetGpu(), Vulkan.GetSurface(), &capabilities);
 	//resolution of images in the swap chain
 	SwapChainExtent = (capabilities.currentExtent.width == -1 || capabilities.currentExtent.height == -1)
 		? SwapChainExtent = WindowExtent : SwapChainExtent = capabilities.currentExtent;
 	// Querry which formats are available in this gpu and choose the appropiate one
 	uint32_t formatCount = {};
-	vkGetPhysicalDeviceSurfaceFormatsKHR(VulkanLib.GetGpu(), VulkanLib.GetSurface(), &formatCount, nullptr);
+	vkGetPhysicalDeviceSurfaceFormatsKHR(Vulkan.GetGpu(), Vulkan.GetSurface(), &formatCount, nullptr);
 	std::vector<VkSurfaceFormatKHR> availableSurfaceFormats(formatCount);
-	vkGetPhysicalDeviceSurfaceFormatsKHR(VulkanLib.GetGpu(), VulkanLib.GetSurface(), &formatCount, availableSurfaceFormats.data());
+	vkGetPhysicalDeviceSurfaceFormatsKHR(Vulkan.GetGpu(), Vulkan.GetSurface(), &formatCount, availableSurfaceFormats.data());
 	
 	VkSurfaceFormatKHR surfaceFormat = {};
 	for (const VkSurfaceFormatKHR& surfaceformat : availableSurfaceFormats)
@@ -68,9 +77,9 @@ void VulkanSwapChain::_CreateSwapChain()
 
 	// Choose the best avaliable presenting mode
 	uint32_t presentModeCount = {};
-	vkGetPhysicalDeviceSurfacePresentModesKHR(VulkanLib.GetGpu(), VulkanLib.GetSurface(), &presentModeCount,nullptr);
+	vkGetPhysicalDeviceSurfacePresentModesKHR(Vulkan.GetGpu(), Vulkan.GetSurface(), &presentModeCount,nullptr);
 	std::vector<VkPresentModeKHR> availablePresentModes(presentModeCount);
-	vkGetPhysicalDeviceSurfacePresentModesKHR(VulkanLib.GetGpu(), VulkanLib.GetSurface(), &presentModeCount, availablePresentModes.data());
+	vkGetPhysicalDeviceSurfacePresentModesKHR(Vulkan.GetGpu(), Vulkan.GetSurface(), &presentModeCount, availablePresentModes.data());
 
 	VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
 
@@ -85,15 +94,15 @@ void VulkanSwapChain::_CreateSwapChain()
 
 	VkSwapchainCreateInfoKHR swapChainCreateInfo = {};
 	swapChainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-	swapChainCreateInfo.minImageCount = minImageCount;
-	swapChainCreateInfo.surface = VulkanLib.GetSurface();
+	swapChainCreateInfo.minImageCount = 3;
+	swapChainCreateInfo.surface = Vulkan.GetSurface();
 	swapChainCreateInfo.imageFormat = surfaceFormat.format;
 	swapChainCreateInfo.imageColorSpace = surfaceFormat.colorSpace;
 	swapChainCreateInfo.imageArrayLayers = 1; // always 1 unless develop stereoscopic 3D app
 	swapChainCreateInfo.imageExtent = SwapChainExtent;
 	swapChainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 	swapChainCreateInfo.preTransform = capabilities.currentTransform;// we don't need to apply any transform before rendering
-	//parameter use indicate if we want to use the alpha channel to blend the window with other windows
+	// parameter use indicate if we want to use the alpha channel to blend the window with other windows
 	// in the window system. We don't want to 99% of the time
 	swapChainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 	swapChainCreateInfo.presentMode = presentMode;
@@ -106,8 +115,8 @@ void VulkanSwapChain::_CreateSwapChain()
 	 */
 	swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-	uint32_t queueFamilyIndices[] = { VulkanLib.GetGraphicsQueueIndex(), VulkanLib.GetPresentationQueueIndex() };
-	if (VulkanLib.GetGraphicsQueueIndex() != VulkanLib.GetPresentationQueueIndex())
+	uint32_t queueFamilyIndices[] = { Vulkan.GetGraphicsQueueIndex(), Vulkan.GetPresentationQueueIndex() };
+	if (Vulkan.GetGraphicsQueueIndex() != Vulkan.GetPresentationQueueIndex())
 	{
 		swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
 		swapChainCreateInfo.queueFamilyIndexCount = 2;
@@ -118,13 +127,13 @@ void VulkanSwapChain::_CreateSwapChain()
 	// to the old swapChain
 	swapChainCreateInfo.oldSwapchain = VK_NULL_HANDLE;
 
-	VK_CHECK(vkCreateSwapchainKHR(VulkanLib.GetVkLogicalDevice(), &swapChainCreateInfo, nullptr, &SwapChain));
+	VK_CHECK(vkCreateSwapchainKHR(Vulkan.GetLogicalDevice(), &swapChainCreateInfo, nullptr, &SwapChain));
 
 	//get handles to the Images the are allocated with the swap chain and destroy when the swap chain is destroyed
 	uint32_t imageCount {0};
-	vkGetSwapchainImagesKHR(VulkanLib.GetVkLogicalDevice(),SwapChain,&imageCount,nullptr);
+	vkGetSwapchainImagesKHR(Vulkan.GetLogicalDevice(),SwapChain,&imageCount,nullptr);
 	SwapChainImages.resize(imageCount);
-	vkGetSwapchainImagesKHR(VulkanLib.GetVkLogicalDevice(), SwapChain, &imageCount, SwapChainImages.data());
+	vkGetSwapchainImagesKHR(Vulkan.GetLogicalDevice(), SwapChain, &imageCount, SwapChainImages.data());
 
 }
 
@@ -148,14 +157,14 @@ void VulkanSwapChain::_CreateImageViews()
 		createInfo.subresourceRange.levelCount = 1;
 		createInfo.subresourceRange.layerCount = 1;
 		createInfo.subresourceRange.baseArrayLayer = 0;
-		if (VK_SUCCESS != vkCreateImageView(VulkanLib.GetVkLogicalDevice(), &createInfo, nullptr, &SwapChainImageViews[i]))
-			LOG_ERR("Failed to create image views!")
+
+		VK_CHECK(vkCreateImageView(Vulkan.GetLogicalDevice(), &createInfo, nullptr, &SwapChainImageViews[i]));
 	}
 }
 
 void VulkanSwapChain::_CreateDepthImageViews()
 {
-	VkFormat depthFormat = VulkanLib.FindSupportedFormat(
+	VkFormat depthFormat = Vulkan.FindSupportedFormat(
 		{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
 		VK_IMAGE_TILING_OPTIMAL,
 		VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
@@ -183,17 +192,17 @@ void VulkanSwapChain::_CreateDepthImageViews()
 		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		imageInfo.flags = 0;
 
-		VK_CHECK(vkCreateImage(VulkanLib.GetVkLogicalDevice(), &imageInfo, nullptr, &DepthImages[i])," failed to create image!\n");
+		VK_CHECK(vkCreateImage(Vulkan.GetLogicalDevice(), &imageInfo, nullptr, &DepthImages[i])," failed to create image!\n");
 
 		VkMemoryRequirements memRequirements;
-		vkGetImageMemoryRequirements(VulkanLib.GetVkLogicalDevice(), DepthImages[i], &memRequirements);
+		vkGetImageMemoryRequirements(Vulkan.GetLogicalDevice(), DepthImages[i], &memRequirements);
 
 		VkMemoryAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 		allocInfo.allocationSize = memRequirements.size;
 
 		VkPhysicalDeviceMemoryProperties memProperties;
-		vkGetPhysicalDeviceMemoryProperties(VulkanLib.GetGpu(), &memProperties);
+		vkGetPhysicalDeviceMemoryProperties(Vulkan.GetGpu(), &memProperties);
 		for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
 		{
 			if ((memRequirements.memoryTypeBits & (1 << i)) &&
@@ -203,9 +212,9 @@ void VulkanSwapChain::_CreateDepthImageViews()
 			}
 		}
 
-		VK_CHECK(vkAllocateMemory(VulkanLib.GetVkLogicalDevice(), &allocInfo, nullptr, &DepthImageMemorys[i])," failed to allocate image memory!\n");
+		VK_CHECK(vkAllocateMemory(Vulkan.GetLogicalDevice(), &allocInfo, nullptr, &DepthImageMemorys[i])," failed to allocate image memory!\n");
 
-		VK_CHECK(vkBindImageMemory(VulkanLib.GetVkLogicalDevice(), DepthImages[i], DepthImageMemorys[i], 0), " bind image memory!\n");
+		VK_CHECK(vkBindImageMemory(Vulkan.GetLogicalDevice(), DepthImages[i], DepthImageMemorys[i], 0), " bind image memory!\n");
 
 		VkImageViewCreateInfo viewInfo{};
 		viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -218,7 +227,7 @@ void VulkanSwapChain::_CreateDepthImageViews()
 		viewInfo.subresourceRange.baseArrayLayer = 0;
 		viewInfo.subresourceRange.layerCount = 1;
 
-		VK_CHECK(vkCreateImageView(VulkanLib.GetVkLogicalDevice(), &viewInfo, nullptr, &DepthImageViews[i]),"failed to create texture image view!\n");
+		VK_CHECK(vkCreateImageView(Vulkan.GetLogicalDevice(), &viewInfo, nullptr, &DepthImageViews[i]),"failed to create texture image view!\n");
 	}
 }
 
@@ -230,7 +239,6 @@ void VulkanSwapChain::_CreateRenderPass()
 	                - specify layout location in which framebuffer attachment to use
 			SUBPASS 0 : - references the bind point amost always graphics
 			            - attachment counts and types
-			.
 			.
 			.
 	   END
@@ -250,7 +258,7 @@ void VulkanSwapChain::_CreateRenderPass()
 
 	//We will use one depth/stencil attachment
 	VkAttachmentDescription depthStencilAttachment = {};
-	depthStencilAttachment.format = VulkanLib.FindSupportedFormat(
+	depthStencilAttachment.format = Vulkan.FindSupportedFormat(
 		{ VK_FORMAT_D32_SFLOAT,VK_FORMAT_D32_SFLOAT_S8_UINT,VK_FORMAT_D24_UNORM_S8_UINT }
 		, VK_IMAGE_TILING_OPTIMAL
 		, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
@@ -289,7 +297,6 @@ void VulkanSwapChain::_CreateRenderPass()
 	subpass.pPreserveAttachments = nullptr;// Attachments that are not used by this subpass, but for which the data must be preserved
 
 	VkSubpassDependency dependency = {};
-
 	dependency.dstSubpass = 0;
 	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -307,7 +314,7 @@ void VulkanSwapChain::_CreateRenderPass()
 	renderPassInfo.dependencyCount = 1;
 	renderPassInfo.pDependencies = &dependency;
 
-	VK_CHECK(vkCreateRenderPass(VulkanLib.GetVkLogicalDevice(), &renderPassInfo, nullptr, &RenderPass));
+	VK_CHECK(vkCreateRenderPass(Vulkan.GetLogicalDevice(), &renderPassInfo, nullptr, &RenderPass));
 }
 
 void VulkanSwapChain::_CreateFrameBuffers()
@@ -327,17 +334,32 @@ void VulkanSwapChain::_CreateFrameBuffers()
 		framebuffCreateInf.height = SwapChainExtent.height;
 		framebuffCreateInf.layers = 1;
 
-		VK_CHECK(vkCreateFramebuffer(VulkanLib.GetVkLogicalDevice(), &framebuffCreateInf, nullptr, &FrameBuffers[i]));
+		VK_CHECK(vkCreateFramebuffer(Vulkan.GetLogicalDevice(), &framebuffCreateInf, nullptr, &FrameBuffers[i]));
 	}
 }
 
 void VulkanSwapChain::_CreateSyncronizationObjects()
 {
+	ImageAvailableSemaphores.resize(MAX_FRAMES_TO_BE_PROCESSED);
+	RenderFinishedSemaphores.resize(MAX_FRAMES_TO_BE_PROCESSED);
+	InFlightFences.resize(MAX_FRAMES_TO_BE_PROCESSED);
+	ImagesInFlight.resize(SwapChainImages.size(),VK_NULL_HANDLE);
+
+
 	VkSemaphoreCreateInfo semaphoreInfo = {};
 	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-	VK_CHECK(vkCreateSemaphore(VulkanLib.GetVkLogicalDevice(), &semaphoreInfo, nullptr, &ImageAvailableSemaphore));
-	VK_CHECK(vkCreateSemaphore(VulkanLib.GetVkLogicalDevice(), &semaphoreInfo, nullptr, &RenderFinishedSemaphore));
+	//CPU-GPU
+	VkFenceCreateInfo fenceInfo = {};
+	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;// avoid unsignal initial state
+	
+	for (int i = 0; i < MAX_FRAMES_TO_BE_PROCESSED; ++i)
+	{
+		VK_CHECK(vkCreateSemaphore(Vulkan.GetLogicalDevice(), &semaphoreInfo, nullptr, &ImageAvailableSemaphores[i]));
+		VK_CHECK(vkCreateSemaphore(Vulkan.GetLogicalDevice(), &semaphoreInfo, nullptr, &RenderFinishedSemaphores[i]));
+		VK_CHECK(vkCreateFence(Vulkan.GetLogicalDevice(), &fenceInfo, nullptr, &InFlightFences[i]));
+	}
 }
 
 VkFramebuffer VulkanSwapChain::GetFrameBuffer(int index) const 
@@ -348,7 +370,55 @@ VkFramebuffer VulkanSwapChain::GetFrameBuffer(int index) const
 
 VkResult VulkanSwapChain::AdquireNextImage(uint32_t* index)
 {
-	return vkAcquireNextImageKHR(VulkanLib.GetVkLogicalDevice(), SwapChain, UINT64_MAX, ImageAvailableSemaphore, VK_NULL_HANDLE, index);
+	vkWaitForFences(Vulkan.GetLogicalDevice(), 1, &InFlightFences[CurrentFrame], VK_TRUE, UINT64_MAX);
+
+
+	return vkAcquireNextImageKHR(Vulkan.GetLogicalDevice(), SwapChain, UINT64_MAX, ImageAvailableSemaphores[CurrentFrame], VK_NULL_HANDLE, index);
+}
+
+VkResult VulkanSwapChain::SubmitCommandBuffers(const VkCommandBuffer* cmdBuffer, uint32_t* imageIndex)
+{
+	//Check if a previouse frame is using this image(i.e there is its fence to wait on)
+	if (ImagesInFlight[*imageIndex] != VK_NULL_HANDLE)
+	{
+		vkWaitForFences(Vulkan.GetLogicalDevice(), 1, &ImagesInFlight[*imageIndex], VK_TRUE, UINT64_MAX);
+	}
+	ImagesInFlight[*imageIndex] = InFlightFences[CurrentFrame];
+
+
+	VkSemaphore waitSemaphores[] = { ImageAvailableSemaphores[CurrentFrame] };
+	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+
+	VkSemaphore signalSemaphores[] = { RenderFinishedSemaphores[CurrentFrame] };
+
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.waitSemaphoreCount = 1;
+	submitInfo.pWaitSemaphores = waitSemaphores;
+	submitInfo.pWaitDstStageMask = waitStages;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = cmdBuffer;
+	submitInfo.signalSemaphoreCount = 1;
+	submitInfo.pSignalSemaphores = signalSemaphores;
+
+	vkResetFences(Vulkan.GetLogicalDevice(), 1, &InFlightFences[CurrentFrame]);
+
+	VK_CHECK(vkQueueSubmit(Vulkan.GetGraphicsQueue(), 1, &submitInfo, InFlightFences[CurrentFrame]));
+
+	VkSwapchainKHR swapChains[] = { SwapChain };
+
+	VkPresentInfoKHR presentInfo = {};
+	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	presentInfo.waitSemaphoreCount = 1;
+	presentInfo.pWaitSemaphores = signalSemaphores;
+	presentInfo.swapchainCount = 1;
+	presentInfo.pSwapchains = swapChains; // pretty much always 1
+	presentInfo.pResults = nullptr;
+	presentInfo.pImageIndices = imageIndex;
+
+	return vkQueuePresentKHR(Vulkan.GetPresentQueue(), &presentInfo);
+
+	CurrentFrame = (CurrentFrame + 1) % MAX_FRAMES_TO_BE_PROCESSED;
 }
 
 

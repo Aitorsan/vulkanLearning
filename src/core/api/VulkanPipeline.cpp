@@ -2,12 +2,12 @@
 #include <cassert>
 #include "core/utils/ShaderLoader.h"
 #include "core/debugger/public/Logger.h"
-#include "core/api/Vulkan.h"
+#include "core/api/VulkanLib.h"
 #include "core/api/pipelineConfigs/IVulkanPipelineConfiguration.h"
 
 
-VulkanPipeline::VulkanPipeline( const Vulkan& vulkanlib, const IVulkanPipelineConfigurationInfo& pipeLineConfigInfo)
-	: VulkanLib{vulkanlib}
+VulkanPipeline::VulkanPipeline( const VulkanLib& vulkan, const IVulkanPipelineConfigurationInfo& pipeLineConfigInfo)
+	: Vulkan{vulkan}
 	, GraphicsPipeline{nullptr}
 	, VertexShaderModule{nullptr}
 	, FragShaderModule{nullptr}
@@ -20,7 +20,7 @@ VulkanPipeline::VulkanPipeline( const Vulkan& vulkanlib, const IVulkanPipelineCo
 
 VulkanPipeline::~VulkanPipeline()
 {
-	vkDestroyPipeline(VulkanLib.GetVkLogicalDevice(), GraphicsPipeline,nullptr);
+	vkDestroyPipeline(Vulkan.GetLogicalDevice(), GraphicsPipeline,nullptr);
 }
 
 void VulkanPipeline::CreateGraphicsPipeline(const IVulkanPipelineConfigurationInfo& pipeConfig)
@@ -84,7 +84,7 @@ void VulkanPipeline::CreateGraphicsPipeline(const IVulkanPipelineConfigurationIn
 	graphicsPipelineCreateInfo.pDepthStencilState = &pipeConfig.DepthStencilInfo;
 	graphicsPipelineCreateInfo.pMultisampleState = &pipeConfig.MultiSampleInfo;
 
-	graphicsPipelineCreateInfo.pDynamicState = &dynamicState;
+	//graphicsPipelineCreateInfo.pDynamicState = &dynamicState;
 	graphicsPipelineCreateInfo.layout = pipeConfig.PipelineLayout;
 	graphicsPipelineCreateInfo.renderPass = pipeConfig.Renderpass;
 	graphicsPipelineCreateInfo.subpass = pipeConfig.SubPass;
@@ -92,11 +92,11 @@ void VulkanPipeline::CreateGraphicsPipeline(const IVulkanPipelineConfigurationIn
 	graphicsPipelineCreateInfo.basePipelineIndex = -1;
 	graphicsPipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-	VK_CHECK(vkCreateGraphicsPipelines(VulkanLib.GetVkLogicalDevice(), nullptr, 1, &graphicsPipelineCreateInfo, nullptr, &GraphicsPipeline));
+	VK_CHECK(vkCreateGraphicsPipelines(Vulkan.GetLogicalDevice(), nullptr, 1, &graphicsPipelineCreateInfo, nullptr, &GraphicsPipeline));
 
 	//clean shaders
-	vkDestroyShaderModule(VulkanLib.GetVkLogicalDevice(), vertexShaderModule, nullptr);
-	vkDestroyShaderModule(VulkanLib.GetVkLogicalDevice(), fragmentShaderModule, nullptr);
+	vkDestroyShaderModule(Vulkan.GetLogicalDevice(), vertexShaderModule, nullptr);
+	vkDestroyShaderModule(Vulkan.GetLogicalDevice(), fragmentShaderModule, nullptr);
 }
 
 void VulkanPipeline::BindPipeline(VkCommandBuffer_T* cmdBuffer)
@@ -114,7 +114,7 @@ VkShaderModule_T* VulkanPipeline::CreateShaderModule(const std::vector<char>& co
 
 	VkShaderModule_T* shaderModule = {nullptr};
 
-	VK_CHECK(vkCreateShaderModule(VulkanLib.GetVkLogicalDevice(), &createInfo, nullptr, &shaderModule));
+	VK_CHECK(vkCreateShaderModule(Vulkan.GetLogicalDevice(), &createInfo, nullptr, &shaderModule));
 
 	return shaderModule;
 }

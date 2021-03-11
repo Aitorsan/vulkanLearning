@@ -8,7 +8,7 @@
 
 VEngine::VEngine(const char* appname, HINSTANCE instance)
 	: Window( (LPCTSTR)appname )
-	, VulkanLib{ nullptr }
+	, Vulkan{ nullptr }
 	, SwapChain{nullptr}
 	, PipelineLayout{nullptr}
 	, Pipeline{ nullptr}
@@ -16,33 +16,34 @@ VEngine::VEngine(const char* appname, HINSTANCE instance)
 	, CommandBuffers{}
 {
 	Window.CreateWin32Window(instance);
-	VulkanLib = _CreateVulkanInstance(appname);
-	SwapChain = new VulkanSwapChain{ *VulkanLib,VkExtent2D{Window.Width,Window.Height} };
+	Vulkan = _CreateVulkanInstance(appname);
+	SwapChain = new VulkanSwapChain{ *Vulkan,VkExtent2D{Window.Width,Window.Height} };
 	VkExtent2D swapChainExtent = SwapChain->GetSwapChainExtent();
+	_CreatePipeLineLayout();
 	VulkanPipelineDefaultConfiguration pipelineConfigInfo;
 	pipelineConfigInfo.CreatePipelineConfigInfo(swapChainExtent.width, swapChainExtent.height);
 	
-	_CreatePipeLineLayout();
 	pipelineConfigInfo.PipelineLayout = PipelineLayout;	
 	pipelineConfigInfo.Renderpass = SwapChain->GetRenderPass();
-	Pipeline = new VulkanPipeline{*VulkanLib, pipelineConfigInfo };
+	Pipeline = new VulkanPipeline{*Vulkan, pipelineConfigInfo };
+	_CreateCommandBuffers();
 }
 
 VEngine::~VEngine()
 {
 
 	delete Pipeline;
-	vkDestroyPipelineLayout(VulkanLib->GetVkLogicalDevice(), PipelineLayout, nullptr);
+	vkDestroyPipelineLayout(Vulkan->GetLogicalDevice(), PipelineLayout, nullptr);
 	delete SwapChain;
 	// the last thing to be deleted should be the library
-	delete VulkanLib;
+	delete Vulkan;
 }
 
-Vulkan* VEngine::_CreateVulkanInstance(const char* appName)
+VulkanLib* VEngine::_CreateVulkanInstance(const char* appName)
 {
 	//if throw doesn't matter nothing has been allocated at this moment
-	Vulkan* vulkanLib = nullptr;
-	vulkanLib = new Vulkan(Window);
+	VulkanLib* vulkan = nullptr;
+	vulkan = new VulkanLib(Window);
 	AppInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	AppInfo.pApplicationName = appName;
 	AppInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
@@ -52,14 +53,15 @@ Vulkan* VEngine::_CreateVulkanInstance(const char* appName)
 	try
 	{  // this can throw and if we throw at this moment we have succesfully
 	   // allocated vulkanLib pointer so we need to clean up 
-		vulkanLib->Init(AppInfo);
+		vulkan->Init(AppInfo);
 	}
 	catch (const std::exception& e)
 	{
-		if (VulkanLib) delete VulkanLib;
+		if (vulkan) delete vulkan;
+		vulkan = nullptr;
 		throw e;
 	}
-	return vulkanLib;
+	return vulkan;
 }
 
 void VEngine::_CreatePipeLineLayout()
@@ -72,7 +74,8 @@ void VEngine::_CreatePipeLineLayout()
 	pipelineLayoutInfo.pushConstantRangeCount = 0;
 	pipelineLayoutInfo.pPushConstantRanges = nullptr;
 
-	VK_CHECK(vkCreatePipelineLayout(VulkanLib->GetVkLogicalDevice(), &pipelineLayoutInfo, nullptr, &PipelineLayout));
+
+	VK_CHECK(vkCreatePipelineLayout(Vulkan->GetLogicalDevice(), &pipelineLayoutInfo, nullptr, &PipelineLayout));
 }
 
 void VEngine::_CreateCommandBuffers()
@@ -81,18 +84,18 @@ void VEngine::_CreateCommandBuffers()
 
 	VkCommandBufferAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo. commandPool = VulkanLib->GetCommandPool();
+	allocInfo. commandPool = Vulkan->GetCommandPool();
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;// can be submit for exec but not being called by other commands
 	allocInfo.commandBufferCount = (uint32_t) CommandBuffers.size();
-
-	VK_CHECK(vkAllocateCommandBuffers(VulkanLib->GetVkLogicalDevice(), &allocInfo, CommandBuffers.data()));
+	
+	VK_CHECK(vkAllocateCommandBuffers(Vulkan->GetLogicalDevice(), &allocInfo, CommandBuffers.data()));
 
 	// we associate each command buffer with one of the framebuffers available
 	for (int i = 0; i < CommandBuffers.size(); ++i)
 	{
 		VkCommandBufferBeginInfo beginInfo = {};
-		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;	
+		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 		//start comman buffer recording
 		VK_CHECK(vkBeginCommandBuffer(CommandBuffers[i], &beginInfo));
 		
@@ -102,9 +105,9 @@ void VEngine::_CreateCommandBuffers()
 		renderPassInfo.framebuffer = SwapChain->GetFrameBuffer(i);
 		renderPassInfo.renderArea.offset = { 0,0 };
 		renderPassInfo.renderArea.extent = SwapChain->GetSwapChainExtent();
-
+		
 		VkClearValue clearValues[2] = {};
-		clearValues[0].color = VkClearColorValue{ 0.0f,0.0f,0.0f,1.0f };
+		clearValues[0].color = VkClearColorValue{ 0.5f,0.3f,0.8f,1.0f };
 		clearValues[1].depthStencil = VkClearDepthStencilValue{ 1.0f,0 };
 		
 		renderPassInfo.clearValueCount = 2;
@@ -112,7 +115,9 @@ void VEngine::_CreateCommandBuffers()
 
 		//Start render pass
 		vkCmdBeginRenderPass(CommandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-		// bind graphics pipeline
+		// bind graphics pipeline 
+		// Binding a pipeline is very similar to glUseProgram, 
+		// with much more state than only the programmable shaders
 		Pipeline->BindPipeline(CommandBuffers[i]);
 		// set the draw command
 		vkCmdDraw(CommandBuffers[i], 3, 1, 0, 0);
@@ -127,22 +132,23 @@ void VEngine::_CreateCommandBuffers()
 
 void VEngine::Run()
 {
-		MSG message;
+	while (!Window.ShouldClose())
+	{
+       
+		Draw();
 
-		while (GetMessage(&message, NULL, 0, 0))
-		{
-			TranslateMessage(&message);
-			DispatchMessage(&message);
-		}
-	    // wait until all gpu operations have been executed like command buffer execution
-		vkDeviceWaitIdle(VulkanLib->GetVkLogicalDevice());
+		Window.PoolEvents();
+	}
+	// wait until all gpu operations have been executed like command buffer execution
+    vkDeviceWaitIdle(Vulkan->GetLogicalDevice());
 }
 
 void VEngine::Draw()
 {
 	// Adquire image from the swapchain
-	//SwapChain->AdquireNextImage(index);
-	// Exectue the command buffer with that image attached in the framebuffer
-	
-	// Return the image to the swapchain
+	uint32_t index;
+	VK_CHECK(SwapChain->AdquireNextImage(&index));
+	// Submit the command buffer for execution with that image attached in the framebuffer
+	VkResult result = SwapChain->SubmitCommandBuffers(&CommandBuffers[index], &index);
+
 }

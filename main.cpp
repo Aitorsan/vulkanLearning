@@ -11,10 +11,10 @@ int WinMain(_In_ HINSTANCE hInstance, _In_opt_  HINSTANCE hprevInstance, _In_ LP
 	}
 	catch (...)
 	{
-		
-	    system("pause");
+		system("pause");
 		return EXIT_FAILURE;
 	}
+	system("pause");
 
 	return EXIT_SUCCESS;
 }
