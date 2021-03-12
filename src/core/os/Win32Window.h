@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Windows.h>
-#include <thread>
 struct VkInstance_T;
 struct VkSurfaceKHR_T;
 class VEngine;

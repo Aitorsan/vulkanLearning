@@ -119,7 +119,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)src;C:\VulkanSDK\1.2.131.2\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(PeojectDir)3dparty;$(ProjectDir)src;C:\VulkanSDK\1.2.131.2\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
@@ -165,7 +165,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)src;C:\VulkanSDK\1.2.131.2\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(PeojectDir)3dparty;$(ProjectDir)src;C:\VulkanSDK\1.2.131.2\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
@@ -196,6 +196,7 @@
     <ClCompile Include="src\core\engine\VEngine.cpp" />
     <ClCompile Include="src\core\api\VulkanLib.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="src\core\api\VertexBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="3dparty\glm\common.hpp" />
@@ -443,6 +444,7 @@
     <ClInclude Include="configFiles\LoggRegister.config" />
     <ClInclude Include="src\core\api\pipelineConfigs\VulkanPipelineDefaultConfiguration.h" />
     <ClInclude Include="src\core\api\pipelineConfigs\IVulkanPipelineConfiguration.h" />
+    <ClInclude Include="src\core\api\VertexBuffer.h" />
     <ClInclude Include="src\core\api\VulkanSwapChain.h" />
     <ClInclude Include="src\core\debugger\public\ConsoleLogger.h" />
     <ClInclude Include="src\core\debugger\public\FileLogger.h" />

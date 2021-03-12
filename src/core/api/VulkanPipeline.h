@@ -6,6 +6,7 @@
 
 class VulkanLib;
 class IVulkanPipelineConfigurationInfo;
+class VertexBuffer;
 
 class VulkanPipeline
 {
@@ -16,11 +17,10 @@ class VulkanPipeline
 public:
 	
 	DISABLE_COPY( VulkanPipeline)
-
-	VulkanPipeline(const VulkanLib& vulkan,const IVulkanPipelineConfigurationInfo& pipeLineConfigInfo );
+	VulkanPipeline(const VulkanLib& vulkan,const IVulkanPipelineConfigurationInfo& pipeLineConfigInfo, VertexBuffer* vertexbuffer = nullptr );
 	~VulkanPipeline();
 	VkShaderModule_T* CreateShaderModule(const std::vector<char>& code);
-	void CreateGraphicsPipeline(const IVulkanPipelineConfigurationInfo& pipeConfig);
+	void CreateGraphicsPipeline(const IVulkanPipelineConfigurationInfo& pipeConfig, VertexBuffer* vb = nullptr);
 	void BindPipeline(VkCommandBuffer_T* cmdBuffer);
 };
 

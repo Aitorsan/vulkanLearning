@@ -4,9 +4,9 @@
 #include "core/debugger/public/Logger.h"
 #include "core/api/VulkanLib.h"
 #include "core/api/pipelineConfigs/IVulkanPipelineConfiguration.h"
+#include "core/api/VertexBuffer.h"
 
-
-VulkanPipeline::VulkanPipeline( const VulkanLib& vulkan, const IVulkanPipelineConfigurationInfo& pipeLineConfigInfo)
+VulkanPipeline::VulkanPipeline( const VulkanLib& vulkan, const IVulkanPipelineConfigurationInfo& pipeLineConfigInfo, VertexBuffer* vertexBuffer)
 	: Vulkan{vulkan}
 	, GraphicsPipeline{nullptr}
 	, VertexShaderModule{nullptr}
@@ -15,7 +15,7 @@ VulkanPipeline::VulkanPipeline( const VulkanLib& vulkan, const IVulkanPipelineCo
 	ASSERT_NOT_NULL(pipeLineConfigInfo.PipelineLayout, "Pipeline layout missing!\n");
 	ASSERT_NOT_NULL(pipeLineConfigInfo.Renderpass, "Render pass config info missing!\n");
 
-	CreateGraphicsPipeline(pipeLineConfigInfo);
+	CreateGraphicsPipeline(pipeLineConfigInfo,vertexBuffer);
 }
 
 VulkanPipeline::~VulkanPipeline()
@@ -23,7 +23,8 @@ VulkanPipeline::~VulkanPipeline()
 	vkDestroyPipeline(Vulkan.GetLogicalDevice(), GraphicsPipeline,nullptr);
 }
 
-void VulkanPipeline::CreateGraphicsPipeline(const IVulkanPipelineConfigurationInfo& pipeConfig)
+
+void VulkanPipeline::CreateGraphicsPipeline(const IVulkanPipelineConfigurationInfo& pipeConfig, VertexBuffer* vertexBuffer)
 {
 	ShaderList shaders = ShaderLoader::loadShaders("glslShaders/vertex.spv", "glslShaders/fragment.spv");
 	//TODO: create enums for the indices in shaders vector
@@ -50,10 +51,17 @@ void VulkanPipeline::CreateGraphicsPipeline(const IVulkanPipelineConfigurationIn
 	//Describe how to interpret vertex data this is equivalent to glVertexAttribPointer, glEnableVertexAttribArray
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInputInfo.pVertexAttributeDescriptions = nullptr;//glVertexAttribPointer
-	vertexInputInfo.pVertexBindingDescriptions = nullptr;//glEnableVertexAttribArray
-	vertexInputInfo.vertexBindingDescriptionCount = 0;
-	vertexInputInfo.vertexAttributeDescriptionCount = 0;
+
+	
+	if (vertexBuffer)
+	{
+		const auto& bindingDescriptions = vertexBuffer->GetBindingDescriptions();
+		const auto& attributeDescriptions = vertexBuffer->GetAttributeDescriptions();
+		vertexInputInfo.vertexBindingDescriptionCount = bindingDescriptions.size();
+		vertexInputInfo.vertexAttributeDescriptionCount = attributeDescriptions.size();
+		vertexInputInfo.pVertexBindingDescriptions = bindingDescriptions.data();
+		vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+	}
 	
 	// view port configuration create info
 	VkPipelineViewportStateCreateInfo viewportInfo = {};

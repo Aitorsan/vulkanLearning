@@ -2,9 +2,13 @@
 #define VENGINE_HPP
 
 #include "core/os/Win32Window.h"
-#include "core/api/VulkanPipeline.h"
-#include "core/api/VulkanLib.h"
-#include "core/api/VulkanSwapChain.h"
+#include <vulkan/vulkan.h>
+#include <vector>
+
+class VertexBuffer;
+class VulkanLib;
+class VulkanSwapChain;
+class VulkanPipeline;
 
 class VEngine
 {
@@ -15,6 +19,7 @@ class VEngine
 	VulkanPipeline* Pipeline;
 	VkApplicationInfo AppInfo;
 	std::vector<VkCommandBuffer> CommandBuffers;
+	VertexBuffer* Vertexbuffer;
 	VulkanLib* _CreateVulkanInstance(const char* appName);
 	void _CreatePipeLineLayout();
 	void _CreateCommandBuffers();

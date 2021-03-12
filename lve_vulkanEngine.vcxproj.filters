@@ -14,6 +14,7 @@
     <ClCompile Include="src\core\debugger\public\ConsoleLogger.cpp" />
     <ClCompile Include="src\core\debugger\public\FileLogger.cpp" />
     <ClCompile Include="src\core\api\pipelineConfigs\VulkanPipelineDefaultConfiguration.cpp" />
+    <ClCompile Include="src\core\api\VertexBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="3dparty\glm\detail\_features.hpp" />
@@ -275,6 +276,7 @@
     <ClInclude Include="src\core\api\pipelineConfigs\IVulkanPipelineConfiguration.h" />
     <ClInclude Include="src\core\api\pipelineConfigs\VulkanPipelineDefaultConfiguration.h" />
     <ClInclude Include="src\defines.h" />
+    <ClInclude Include="src\core\api\VertexBuffer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="3dparty\glm\detail\func_common.inl" />

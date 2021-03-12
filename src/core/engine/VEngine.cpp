@@ -2,9 +2,12 @@
 
 #include <Windows.h>
 
-
 #include "core/debugger/public/Logger.h"
 #include "core/api/pipelineConfigs/VulkanPipeLineDefaultConfiguration.h"
+#include "core/api/VulkanSwapChain.h"
+#include "core/api/VulkanPipeline.h"
+#include "core/api/VulkanLib.h"
+#include "core/api/VertexBuffer.h"
 
 VEngine::VEngine(const char* appname, HINSTANCE instance)
 	: Window( (LPCTSTR)appname )
@@ -14,6 +17,7 @@ VEngine::VEngine(const char* appname, HINSTANCE instance)
 	, Pipeline{ nullptr}
 	, AppInfo{}
 	, CommandBuffers{}
+	, Vertexbuffer{nullptr}
 {
     
 	Window.CreateWin32Window(instance);
@@ -26,7 +30,16 @@ VEngine::VEngine(const char* appname, HINSTANCE instance)
 	
 	pipelineConfigInfo.PipelineLayout = PipelineLayout;	
 	pipelineConfigInfo.Renderpass = SwapChain->GetRenderPass();
-	Pipeline = new VulkanPipeline{*Vulkan, pipelineConfigInfo };
+
+	std::vector<float> triangle
+	{
+		0.0f,-0.5f,0.0,  1.0f,0.0f,0.0f,
+		0.5f,0.5f,0.0,   0.0f,1.0f,0.0f,
+		-0.5f,0.5f,0.0,  0.0f,0.0f,1.0f
+	};
+
+	Vertexbuffer = new VertexBuffer(*Vulkan, triangle, 6* sizeof(float), 0, 2);
+	Pipeline = new VulkanPipeline{*Vulkan, pipelineConfigInfo,Vertexbuffer};
 	_CreateCommandBuffers();
 
 
@@ -34,6 +47,7 @@ VEngine::VEngine(const char* appname, HINSTANCE instance)
 
 VEngine::~VEngine()
 {
+	delete Vertexbuffer;
 	vkFreeCommandBuffers(Vulkan->GetLogicalDevice(), Vulkan->GetCommandPool(), static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
 	delete Pipeline;
 	vkDestroyPipelineLayout(Vulkan->GetLogicalDevice(), PipelineLayout, nullptr);
@@ -138,8 +152,11 @@ void VEngine::_CreateCommandBuffers()
 		scissor.offset = { 0,0 };
 		scissor.extent = { extent.width,(uint32_t)extent.height };
 		vkCmdSetScissor(CommandBuffers[i], 0, 1, &scissor);
+
+        // bind vertex buffer
+		Vertexbuffer->BindBuffer(CommandBuffers[i]);
 		// set the draw command
-		vkCmdDraw(CommandBuffers[i], 3, 1, 0, 0);
+		vkCmdDraw(CommandBuffers[i], (uint32_t)Vertexbuffer->GetVerticesSize() , 1, 0, 0);
 		//End render pass
 		vkCmdEndRenderPass(CommandBuffers[i]);
 
