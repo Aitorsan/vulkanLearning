@@ -38,7 +38,9 @@ public:
 	VkFramebuffer GetFrameBuffer(int index) const; 
 	VkResult AdquireNextImage(uint32_t* index);
 	VkResult SubmitCommandBuffers(const VkCommandBuffer* cmdBuffer, uint32_t* ImageIndex);
+	void CleanupSwapChain();
 	std::size_t ImageCount() const { return SwapChainImages.size(); }
+	void RecreateSwapChain();
 
 private:
 	void _CreateSwapChain();

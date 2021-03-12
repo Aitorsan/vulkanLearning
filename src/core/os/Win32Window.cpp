@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.h>
 #include <cstdio>
 #include "core/debugger/public/Logger.h"
-
+#include "core/engine/VEngine.h"
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
@@ -24,8 +24,15 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			break;
 		}
 		case WM_PAINT:
+		{
 			ValidateRect(hwnd, NULL);
 			break;
+		}
+		case WM_SIZE:
+		{
+		
+			break;
+		}
 		default:
 			return DefWindowProc(hwnd, msg, wparam, lparam);
 	}
@@ -57,7 +64,7 @@ void Win32Window::CreateWin32Window(HINSTANCE hInstance)
 	wcex.hInstance = hInstance;
 	wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APPLICATION));
 	wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
-	wcex.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
+	wcex.hbrBackground = (HBRUSH) GetStockObject(BLACK_BRUSH);
 	wcex.lpszMenuName = NULL;
 	wcex.lpszClassName = ApplicationName;
 	wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_APPLICATION));
@@ -87,7 +94,9 @@ void Win32Window::CreateWin32Window(HINSTANCE hInstance)
 	,this);
 
 	if (WindowHandle == 0)
-		LOG_ERR("Error can't create window")
+	{
+		LOG_ERR("Error can't create window");
+	}
 	else
 	{
 		ShowWindow(WindowHandle, SW_SHOW);
@@ -95,6 +104,7 @@ void Win32Window::CreateWin32Window(HINSTANCE hInstance)
 		SetFocus(WindowHandle);
 	}
 	CloseWindow = false;
+
 }
 
 void Win32Window::PoolEvents()
@@ -108,6 +118,7 @@ void Win32Window::PoolEvents()
 		DispatchMessage(&message);
 	}
 }
+
 
 
 void Win32Window::OnDestroy()
@@ -134,5 +145,5 @@ void Win32Window::CreateWindowSurface(VkInstance vulkanInstance, VkSurfaceKHR_T*
 	surfaceInfo.hwnd = WindowHandle;
 
 	if (vkCreateWin32SurfaceKHR(vulkanInstance, &surfaceInfo, nullptr, &(*windowSurface)) != VK_SUCCESS)
-		LOG_ERR("Unable to create window surface for win32 api!\n")
+		LOG_ERR("Unable to create window surface for win32 api!\n");
 }

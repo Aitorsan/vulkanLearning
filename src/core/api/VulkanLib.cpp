@@ -44,12 +44,13 @@ void VulkanLib::Init(const VkApplicationInfo& appInfo)
 {
 	// Check for validation support if validation layers are enabled
 	if (!ValLayers.CheckValidationLayerSupport())
-		LOG_ERR("Some requested validation layers have not been found supported\n")
+		LOG_ERR("Some requested validation layers have not been found supported\n");
 
 	CreateVulkanInstance(appInfo);
 
 	// If validation Layers are enabled and we have succesfully created a vulkan instance, then we set up Debug messenger
 	ValLayers.SetUpDebugMessenger(VulkanInstance);
+
 	Window32Api.CreateWindowSurface(VulkanInstance,&WindowSurface);
 	SelectPhysicalDevice(VulkanInstance, WindowSurface);
 	CreateLogicalDevice(PhysicalGpu);
@@ -73,6 +74,7 @@ void VulkanLib::CreateVulkanInstance(const VkApplicationInfo& appInfo)
 	createInf.pApplicationInfo = &appInfo;
 	createInf.enabledExtensionCount = (uint32_t)RequiredVkIntanceExtensions.size();
 	createInf.ppEnabledExtensionNames = RequiredVkIntanceExtensions.data();
+	createInf.pNext = nullptr;
 	
 	if (ValLayers.EnableValidationLayers)
 	{
@@ -82,6 +84,7 @@ void VulkanLib::CreateVulkanInstance(const VkApplicationInfo& appInfo)
 	}
 
 	VK_CHECK(vkCreateInstance(&createInf, nullptr, &VulkanInstance), " cant't find a compatilbe Vulkan installable client\n");
+
 }
 
 bool VulkanLib::HasPhysicalDeviceRequiredExtensionSupport(VkPhysicalDevice gpu)

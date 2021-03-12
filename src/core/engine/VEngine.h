@@ -24,6 +24,8 @@ public:
 	~VEngine();
 	void Run();
 	void Draw();
+	void RecreateSwapChain();
+
 };
 
 #endif //VENGINE_HPP

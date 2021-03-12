@@ -1,15 +1,14 @@
 #pragma once
 
-
-#ifdef NDBUG
-#define LOG_MSG(message,...) {}
-#define LOG_TRACE(message, ...) {}
-#define LOG_WARN(message,...) {}
-#define LOG_ERR(message,...) {}
-#define VAL_LAYER(message,...) {}
-#define ASSERT_EQU(object, value, message, ...) {}
-#define ASSERT_NOT_NULL(object, value, message, ...) {}
-#define VK_CHECK(func,message,...)
+#ifdef NDEBUG
+#define LOG_MSG(message,...) ;
+#define LOG_TRACE(message, ...) ;
+#define LOG_WARN(message,...) ;
+#define LOG_ERR(message,...) ;
+#define VAL_LAYER(message,...) ;
+#define ASSERT_EQU(object, value, message, ...) ;
+#define ASSERT_NOT_NULL(object, value, message, ...) ;
+#define VK_CHECK(func,message,...) func
 
 #else
 #include <exception>

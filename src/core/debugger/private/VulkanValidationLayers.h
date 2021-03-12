@@ -9,7 +9,7 @@ namespace vkLayers
     {
     public:
         const bool EnableValidationLayers;
-        const std::vector<const char*> ValidationLayers = { "VK_LAYER_KHRONOS_validation" };
+        const std::vector<const char*> ValidationLayers;
         VkDebugUtilsMessengerEXT DebugMessenger;
         VkDebugUtilsMessengerCreateInfoEXT DebugMessengerCreateInfo;
 

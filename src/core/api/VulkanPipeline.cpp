@@ -64,12 +64,11 @@ void VulkanPipeline::CreateGraphicsPipeline(const IVulkanPipelineConfigurationIn
 	viewportInfo.pViewports = &pipeConfig.ViewPort;
 
 	// Configure some dynamic state. We can change this states without recreating the pipeline
-	VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT,VK_DYNAMIC_STATE_LINE_WIDTH };
+	VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT,VK_DYNAMIC_STATE_SCISSOR,VK_DYNAMIC_STATE_LINE_WIDTH };
 	VkPipelineDynamicStateCreateInfo dynamicState{};
 	dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-	dynamicState.dynamicStateCount = 2;
+	dynamicState.dynamicStateCount = 3;
 	dynamicState.pDynamicStates = dynamicStates;
-
 
 	// fill int the graphics pipeline information to create the pipeline
 	VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfo = {};
@@ -83,12 +82,10 @@ void VulkanPipeline::CreateGraphicsPipeline(const IVulkanPipelineConfigurationIn
 	graphicsPipelineCreateInfo.pColorBlendState = &pipeConfig.ColorBlendInfo;
 	graphicsPipelineCreateInfo.pDepthStencilState = &pipeConfig.DepthStencilInfo;
 	graphicsPipelineCreateInfo.pMultisampleState = &pipeConfig.MultiSampleInfo;
-
-	//graphicsPipelineCreateInfo.pDynamicState = &dynamicState;
+	graphicsPipelineCreateInfo.pDynamicState = &dynamicState;
 	graphicsPipelineCreateInfo.layout = pipeConfig.PipelineLayout;
 	graphicsPipelineCreateInfo.renderPass = pipeConfig.Renderpass;
 	graphicsPipelineCreateInfo.subpass = pipeConfig.SubPass;
-
 	graphicsPipelineCreateInfo.basePipelineIndex = -1;
 	graphicsPipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
 

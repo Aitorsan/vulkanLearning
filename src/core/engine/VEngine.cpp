@@ -2,9 +2,9 @@
 
 #include <Windows.h>
 
+
 #include "core/debugger/public/Logger.h"
 #include "core/api/pipelineConfigs/VulkanPipeLineDefaultConfiguration.h"
-
 
 VEngine::VEngine(const char* appname, HINSTANCE instance)
 	: Window( (LPCTSTR)appname )
@@ -15,6 +15,7 @@ VEngine::VEngine(const char* appname, HINSTANCE instance)
 	, AppInfo{}
 	, CommandBuffers{}
 {
+    
 	Window.CreateWin32Window(instance);
 	Vulkan = _CreateVulkanInstance(appname);
 	SwapChain = new VulkanSwapChain{ *Vulkan,VkExtent2D{Window.Width,Window.Height} };
@@ -27,11 +28,13 @@ VEngine::VEngine(const char* appname, HINSTANCE instance)
 	pipelineConfigInfo.Renderpass = SwapChain->GetRenderPass();
 	Pipeline = new VulkanPipeline{*Vulkan, pipelineConfigInfo };
 	_CreateCommandBuffers();
+
+
 }
 
 VEngine::~VEngine()
 {
-
+	vkFreeCommandBuffers(Vulkan->GetLogicalDevice(), Vulkan->GetCommandPool(), static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
 	delete Pipeline;
 	vkDestroyPipelineLayout(Vulkan->GetLogicalDevice(), PipelineLayout, nullptr);
 	delete SwapChain;
@@ -119,6 +122,22 @@ void VEngine::_CreateCommandBuffers()
 		// Binding a pipeline is very similar to glUseProgram, 
 		// with much more state than only the programmable shaders
 		Pipeline->BindPipeline(CommandBuffers[i]);
+
+		// set the view port and scissors dynamically so we don't have to recreate the pipeline
+		VkExtent2D  extent = SwapChain->GetSwapChainExtent();
+		VkViewport viewport = {};
+		viewport.height = (float)extent.height;
+		viewport.width = (float)extent.width;
+		viewport.minDepth = (float)0.0f;
+		viewport.maxDepth = (float)1.0f;
+		viewport.x = 0;
+		viewport.y = 0;
+		vkCmdSetViewport(CommandBuffers[i], 0, 1, &viewport);
+
+		VkRect2D scissor = {};
+		scissor.offset = { 0,0 };
+		scissor.extent = { extent.width,(uint32_t)extent.height };
+		vkCmdSetScissor(CommandBuffers[i], 0, 1, &scissor);
 		// set the draw command
 		vkCmdDraw(CommandBuffers[i], 3, 1, 0, 0);
 		//End render pass
@@ -136,19 +155,56 @@ void VEngine::Run()
 	{
        
 		Draw();
-
 		Window.PoolEvents();
 	}
 	// wait until all gpu operations have been executed like command buffer execution
     vkDeviceWaitIdle(Vulkan->GetLogicalDevice());
+}
+void VEngine::RecreateSwapChain()
+{
+	vkDeviceWaitIdle(Vulkan->GetLogicalDevice());
+	vkFreeCommandBuffers(Vulkan->GetLogicalDevice(), Vulkan->GetCommandPool(), static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
+	SwapChain->CleanupSwapChain();
+	SwapChain->RecreateSwapChain();
+	_CreateCommandBuffers();
 }
 
 void VEngine::Draw()
 {
 	// Adquire image from the swapchain
 	uint32_t index;
-	VK_CHECK(SwapChain->AdquireNextImage(&index));
+	VkResult result = SwapChain->AdquireNextImage(&index);
+	
+	if (result == VK_ERROR_OUT_OF_DATE_KHR) 
+	{
+		vkDeviceWaitIdle(Vulkan->GetLogicalDevice());
+		vkFreeCommandBuffers(Vulkan->GetLogicalDevice(), Vulkan->GetCommandPool(), static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
+		SwapChain->CleanupSwapChain();
+		SwapChain->RecreateSwapChain();
+		_CreateCommandBuffers();
+		return;
+	}
+	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) 
+	{
+		LOG_ERR("failed to acquire swap chain image!");
+	}
+	
+
 	// Submit the command buffer for execution with that image attached in the framebuffer
-	VkResult result = SwapChain->SubmitCommandBuffers(&CommandBuffers[index], &index);
+	result = SwapChain->SubmitCommandBuffers(&CommandBuffers[index], &index);
+
+	if (result == VK_ERROR_OUT_OF_DATE_KHR)
+	{
+		vkDeviceWaitIdle(Vulkan->GetLogicalDevice());
+
+		vkFreeCommandBuffers(Vulkan->GetLogicalDevice(), Vulkan->GetCommandPool(), static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
+		SwapChain->CleanupSwapChain();
+		SwapChain->RecreateSwapChain();
+		_CreateCommandBuffers();
+	}
+	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) 
+	{
+		LOG_ERR("failed to acquire swap chain image!");
+	}
 
 }

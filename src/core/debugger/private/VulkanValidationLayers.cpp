@@ -106,7 +106,7 @@ namespace vkLayers
         if(!this->EnableValidationLayers) return;
 
         if (CreateDebugUtilsMessengerEXT(vulkanInstance, &DebugMessengerCreateInfo, nullptr) != VK_SUCCESS)
-            VAL_LAYER("Failed to create debug messenger\n")
+            VAL_LAYER("Failed to create debug messenger\n");
     }
 
 
@@ -130,12 +130,14 @@ namespace vkLayers
 
     void vkLayers::VulkanValidationLayer::LogVulkanExtensions(const std::vector<VkExtensionProperties>& extensions, const std::vector<const char*> requiredExtensions)
     {
-        LogExtensions("Vulkan library Instance", extensions, requiredExtensions);
+        if(EnableValidationLayers)
+            LogExtensions("Vulkan library Instance", extensions, requiredExtensions);
     }
 
     void vkLayers::VulkanValidationLayer::LogGpuExtensions(const std::vector<VkExtensionProperties>& extensions, const std::vector<const char*> requiredExtensions)
     {
-         LogExtensions("Gpu/PhysicalDevice",extensions, requiredExtensions);
+        if (EnableValidationLayers)
+          LogExtensions("Gpu/PhysicalDevice",extensions, requiredExtensions);
     }
 
 }

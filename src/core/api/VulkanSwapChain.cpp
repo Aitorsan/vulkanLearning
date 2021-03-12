@@ -35,7 +35,30 @@ VulkanSwapChain::VulkanSwapChain(VulkanLib& vulkan,VkExtent2D windowExtent)
 
 VulkanSwapChain::~VulkanSwapChain()
 {
+
 	VkDevice logicalDevice = Vulkan.GetLogicalDevice();
+
+	for (auto imageView : SwapChainImageViews)
+	{
+		vkDestroyImageView(logicalDevice, imageView, nullptr);
+	}
+	SwapChainImageViews.clear();
+	
+
+	vkDestroySwapchainKHR(logicalDevice, SwapChain, nullptr);
+
+	for (int i = 0; i < DepthImages.size(); ++i)
+	{
+		vkDestroyImageView(logicalDevice, DepthImageViews[i],nullptr);
+		vkDestroyImage(logicalDevice, DepthImages[i], nullptr);
+		vkFreeMemory(logicalDevice, DepthImageMemorys[i], nullptr);
+	}
+
+	for (auto framebuffer : FrameBuffers)
+	{
+		vkDestroyFramebuffer(logicalDevice, framebuffer, nullptr);
+	}
+	vkDestroyRenderPass(logicalDevice, RenderPass, nullptr);
 
 	for (int i = 0; i < MAX_FRAMES_TO_BE_PROCESSED; ++i)
 	{
@@ -43,13 +66,7 @@ VulkanSwapChain::~VulkanSwapChain()
 		vkDestroySemaphore(logicalDevice, ImageAvailableSemaphores[i], nullptr);
 		vkDestroyFence(logicalDevice, InFlightFences[i], nullptr);
 	}
-	vkDestroyRenderPass(logicalDevice, RenderPass, nullptr);
 
-	for (auto imageView : SwapChainImageViews)
-	{
-		vkDestroyImageView(logicalDevice, imageView, nullptr);
-	}
-	vkDestroySwapchainKHR(logicalDevice, SwapChain, nullptr);
 }
 
 void VulkanSwapChain::_CreateSwapChain()
@@ -94,7 +111,7 @@ void VulkanSwapChain::_CreateSwapChain()
 
 	VkSwapchainCreateInfoKHR swapChainCreateInfo = {};
 	swapChainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-	swapChainCreateInfo.minImageCount = 3;
+	swapChainCreateInfo.minImageCount = 4;
 	swapChainCreateInfo.surface = Vulkan.GetSurface();
 	swapChainCreateInfo.imageFormat = surfaceFormat.format;
 	swapChainCreateInfo.imageColorSpace = surfaceFormat.colorSpace;
@@ -160,6 +177,41 @@ void VulkanSwapChain::_CreateImageViews()
 
 		VK_CHECK(vkCreateImageView(Vulkan.GetLogicalDevice(), &createInfo, nullptr, &SwapChainImageViews[i]));
 	}
+}
+
+void VulkanSwapChain::CleanupSwapChain() 
+{
+	VkDevice device = Vulkan.GetLogicalDevice();
+	for (size_t i = 0; i <FrameBuffers.size(); i++) {
+		vkDestroyFramebuffer(device, FrameBuffers[i], nullptr);
+	}
+
+	vkDestroyRenderPass(device, RenderPass, nullptr);
+
+	for (size_t i = 0; i < SwapChainImageViews.size(); i++) {
+		vkDestroyImageView(device, SwapChainImageViews[i], nullptr);
+	}
+
+	for (auto imageView : DepthImageViews)
+	{
+		vkDestroyImageView(device, imageView, nullptr);
+	}
+
+	vkDestroySwapchainKHR(device, SwapChain, nullptr);
+}
+
+
+void VulkanSwapChain::RecreateSwapChain()
+{
+	
+	_CreateSwapChain();
+	_CreateImageViews();
+	_CreateDepthImageViews();
+	_CreateRenderPass();
+	// recreate graphics pipeline
+	_CreateFrameBuffers();	
+
+
 }
 
 void VulkanSwapChain::_CreateDepthImageViews()
@@ -286,7 +338,7 @@ void VulkanSwapChain::_CreateRenderPass()
 	// It can olny be one depth attachment
 	VkAttachmentReference depthAttachmentRef = {};
 	depthAttachmentRef.attachment = 1;
-	depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+	depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 	// describe the subpass
 	VkSubpassDescription subpass{};
 	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
@@ -295,7 +347,7 @@ void VulkanSwapChain::_CreateRenderPass()
 	subpass.pResolveAttachments = nullptr; // Attachments used for multisampling color attachments
 	subpass.pDepthStencilAttachment = &depthAttachmentRef;// depth buffer attachment/stencil
 	subpass.pPreserveAttachments = nullptr;// Attachments that are not used by this subpass, but for which the data must be preserved
-
+	
 	VkSubpassDependency dependency = {};
 	dependency.dstSubpass = 0;
 	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
